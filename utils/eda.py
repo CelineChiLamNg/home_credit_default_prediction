@@ -4,16 +4,14 @@ import seaborn as sns
 import numpy as np
 from typing import Optional, List
 
-
-#def unique_values(df: pd.DataFrame) -> pd.DataFrame:
-
 def missing_values(df: pd.DataFrame) -> pd.DataFrame:
     length = df.shape[0]
     missing_values_count = df.isnull().sum()
     missing_values_percentage = round((df.isnull().sum() / len(df)) * 100, 2)
     summary_df = pd.DataFrame({
         'Missing Values': missing_values_count,
-        'Percentage Missing': missing_values_percentage
+        'Percentage Missing': missing_values_percentage,
+        'Datatype': df.dtypes
     })
     return summary_df
 
