@@ -4,26 +4,19 @@ import numpy as np
 
 import pandas as pd
 
-def encode_object_columns(df: pd.DataFrame, key_column: str) -> pd.DataFrame:
-    # Create a copy to avoid modifying the original DataFrame
-    df_encoded = df.copy()
+from utils.custom_preprocessor import OneHotEncoderWithKeys
 
-    # Identify object-type columns (typically categorical/string columns)
-    object_cols = df_encoded.select_dtypes(include=['object']).columns
-
-    # Factorize each object column except the key_column
-    for col in object_cols:
-        if col != key_column:
-            # Factorize assigns a numeric code to each unique category
-            # Unseen categories in factorize become new codes automatically
-            # Missing values (NaN) get coded as -1 by default
-            df_encoded[col], _ = pd.factorize(df_encoded[col])
-
-    return df_encoded
 
 def process_bureau(bureau_transformed: pd.DataFrame) -> pd.DataFrame:
-    # Encode object columns
-    bureau_encoded = encode_object_columns(bureau_transformed, key_column='SK_ID_CURR')
+
+
+
+    status_encoder = OneHotEncoderWithKeys(
+        column_to_encode='STATUS', key_column='SK_ID_BUREAU', prefix='STATUS'
+    )
+
+    bureau_encoded = status_encoder.fit_transform(bureau_transformed)
+
 
     # Step 1: Add counts for SK_ID_BUREAU
     bureau_counts: pd.DataFrame = bureau_encoded.groupby('SK_ID_CURR').size().reset_index(name='SK_ID_BUREAU_count')
@@ -50,7 +43,16 @@ def process_bureau(bureau_transformed: pd.DataFrame) -> pd.DataFrame:
 
 def process_previous_application(previous_application_transformed: pd.DataFrame) -> pd.DataFrame:
     # Encode object columns
-    previous_encoded = encode_object_columns(previous_application_transformed, key_column='SK_ID_CURR')
+
+
+
+
+    status_encoder = OneHotEncoderWithKeys(
+        column_to_encode='STATUS', key_column='SK_ID_BUREAU', prefix='STATUS'
+    )
+
+    previous_encoded = status_encoder.fit_transform(previous_application_transformed)
+
 
     # Step 1: Add counts for SK_ID_PREV
     previous_counts: pd.DataFrame = previous_encoded.groupby('SK_ID_CURR').size().reset_index(name='SK_ID_PREV_count')
