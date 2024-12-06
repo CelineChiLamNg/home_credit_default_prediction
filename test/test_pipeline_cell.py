@@ -1,7 +1,6 @@
 import pickle
-import os
 
-from utils.custom_preprocessor import get_data_merged_train
+from utils.get_data_merged_train import get_data_merged_train
 
 bureau_file_path = "/Users/celineng/PycharmProjects/chilng-DS.v2.5.3.4.1/aggregated_data/bureau_transformed.pkl"
 previous_application_file_path = "/Users/celineng/PycharmProjects/chilng-DS.v2.5.3.4.1/aggregated_data/previous_application_transformed.pkl"
