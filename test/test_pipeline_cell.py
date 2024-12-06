@@ -20,3 +20,5 @@ with open(previous_application_file_path, "rb") as previous_application_file:
 data_merged_train = get_data_merged_train(bureau_transformed,
                                           previous_application_transformed,
                                           {'data_train': data_train})
+
+print(data_merged_train.head())
