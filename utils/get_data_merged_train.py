@@ -207,9 +207,30 @@ def merge_with_main_table(
 def get_data_merged_train(
         bureau_transformed: pd.DataFrame,
         previous_application_transformed: pd.DataFrame,
-        train_splits: Dict[str, pd.DataFrame]
+        train_splits: Dict[str, pd.DataFrame],
+        n_rows: int = None
 ) -> pd.DataFrame:
     print(f"\n[{datetime.datetime.now()}] === Starting data merge train process ===")
+    
+    # If n_rows is specified, subset the main training data and filter related records
+    if n_rows is not None:
+        print(f"[{datetime.datetime.now()}] Subsetting data to first {n_rows} rows...")
+        train_data_small = train_splits['data_train'].head(n_rows)
+        valid_ids = train_data_small['SK_ID_CURR'].unique()
+        
+        bureau_transformed = bureau_transformed[
+            bureau_transformed['SK_ID_CURR'].isin(valid_ids)
+        ]
+        previous_application_transformed = previous_application_transformed[
+            previous_application_transformed['SK_ID_CURR'].isin(valid_ids)
+        ]
+        train_splits = {'data_train': train_data_small}
+        
+        print(f"[{datetime.datetime.now()}] Subset shapes:")
+        print(f"Training data: {train_data_small.shape}")
+        print(f"Bureau data: {bureau_transformed.shape}")
+        print(f"Previous application data: {previous_application_transformed.shape}")
+    
     print(f"[{datetime.datetime.now()}] Processing bureau data...")
     bureau_final: pd.DataFrame = process_bureau(bureau_transformed)
     
