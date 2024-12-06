@@ -5,7 +5,7 @@ from utils.get_data_merged_train import get_data_merged_train
 
 def run_test_small():
     # Define number of rows to use for testing
-    N_ROWS = 1000  # Adjust this number as needed
+    N_ROWS = 10000  # Adjust this number as needed
 
     # File paths
     bureau_file_path = "/Users/celineng/PycharmProjects/chilng-DS.v2.5.3.4.1/aggregated_data/bureau_transformed.pkl"
