@@ -148,21 +148,13 @@ def process_previous_application(previous_application_transformed: pd.DataFrame)
     numeric_cols = [col for col in numeric_cols if col not in excluded_cols]
     print(f"[{datetime.datetime.now()}] Found {len(numeric_cols)} numeric columns for aggregation")
 
-    # Step 3: Aggregate by SK_ID_CURR only on numeric columns
-    print(f"[{datetime.datetime.now()}] Performing initial aggregation...")
-    agg_funcs: List[str] = ['mean', 'sum', 'min', 'max', 'count']
-    previous_aggregated: pd.DataFrame = previous_cleaned.groupby('SK_ID_CURR')[numeric_cols].agg(agg_funcs)
-    previous_aggregated.columns = [f"{col[0]}_{col[1]}" for col in previous_aggregated.columns]
-    previous_aggregated.reset_index(inplace=True)
-    print(f"[{datetime.datetime.now()}] Initial aggregation shape: {previous_aggregated.shape}")
-
     # Step 3: Aggregate by SK_ID_CURR
-    print(f"[{datetime.datetime.now()}] Performing full aggregation...")
+    print(f"[{datetime.datetime.now()}] Performing aggregation...")
     agg_funcs: List[str] = ['mean', 'sum', 'min', 'max', 'count']
     previous_aggregated = previous_cleaned.groupby('SK_ID_CURR').agg(
         {col: agg_funcs for col in previous_cleaned.columns if col not in ['SK_ID_CURR', 'SK_ID_BUREAU_count']}
     ).reset_index()
-    print(f"[{datetime.datetime.now()}] Full aggregation shape: {previous_aggregated.shape}")
+    print(f"[{datetime.datetime.now()}] Aggregated previous application shape: {previous_aggregated.shape}")
 
     # Step 4: Rename columns efficiently
     print(f"[{datetime.datetime.now()}] Renaming columns...")
