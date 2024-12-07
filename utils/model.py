@@ -16,7 +16,7 @@ def evaluate_model(model, X_test, y_test):
 
 def prep_train_eval(
     preprocessor: Pipeline, X: pd.DataFrame, y: pd.Series
-) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series] :
     """splits the data_csv into train/eval and preprocesses.
 
     Parameters
@@ -30,7 +30,7 @@ def prep_train_eval(
     """
 
     X_train, X_eval, y_train, y_eval = train_test_split(
-        X, y, test_size=0.2, random_state=0
+        X, y, test_size=0.2, random_state=0, stratify=y
     )
     X_train = pd.DataFrame(
         preprocessor.fit_transform(X_train, y_train),
@@ -40,17 +40,4 @@ def prep_train_eval(
         preprocessor.transform(X_eval), columns=preprocessor.get_feature_names_out()
     )
     return X_train, y_train, X_eval, y_eval
-
-class AgeBinnerTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, bins, labels=None):
-        self.bins = bins
-        self.labels = labels
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X):
-        X = X.copy()
-        X['Age_binned'] = pd.cut(X['Age'], bins=self.bins, labels=self.labels)
-        return X
 

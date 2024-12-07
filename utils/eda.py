@@ -111,12 +111,11 @@ None, nrows: int = 1, ncols: int = 1) -> None:
     plt.tight_layout()
     plt.show()
 
-def percentage_subplots(data: pd.DataFrame, columns:List[str], title: Optional[
+def percentage_subplots(data: pd.DataFrame, columns: List[str], title: Optional[
     str] = None, nrows: int = 1, ncols: int = 1) -> None:
 
-
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols*5,
-                                                                nrows*4))
+    # Adjust the height based on the number of rows
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols * 6, nrows * 6))
     fig.subplots_adjust(hspace=1, wspace=0.4)
 
     if np.ndim(axes) == 0:
@@ -128,23 +127,19 @@ def percentage_subplots(data: pd.DataFrame, columns:List[str], title: Optional[
     df_len = data.shape[0]
     axes_len = len(axes_flatten)
 
-
     for i, col in enumerate(columns):
-        sns.countplot(data=data, x=col, ax=axes_flatten[i])
+        sns.countplot(data=data, y=col, ax=axes_flatten[i], orient='h')  # Horizontal plot
         axes_flatten[i].set_title(col, pad=15)
         for p in axes_flatten[i].patches:
-            percentage = round((p.get_height() * 100 / df_len), 2)
+            percentage = round((p.get_width() * 100 / df_len), 2)
             (axes_flatten[i]
              .annotate(f'{percentage}%',
-                       (p.get_x() + p.get_width() / 2., p
-                        .get_height()), ha='center',
-                       va='center', xytext=(0, 10),
+                       (p.get_width(), p.get_y() + p.get_height() / 2.),
+                       ha='center', va='center', xytext=(10, 0),
                        textcoords='offset points'))
         sns.despine(top=True, right=True, left=True, bottom=True)
-        axes_flatten[i].tick_params(axis='x', which='both', length=0,
-                                    labelbottom=True)
-        axes_flatten[i].tick_params(axis='y', which='both', length=0,
-                                    labelleft=False)
+        axes_flatten[i].tick_params(axis='y', which='both', length=0, labelleft=True)
+        axes_flatten[i].tick_params(axis='x', which='both', length=0, labelbottom=False)
         axes_flatten[i].set(ylabel=None, xlabel=None)
 
     if col_len < axes_len:
@@ -203,7 +198,7 @@ def stacked_bar_plot(df: pd.DataFrame, col: str, hue: str,
 
 
 def stacked_horizontal_feature_distribution(data: pd.DataFrame, columns:
-List[str], title: Optional[str] = None) -> None:
+List[str], title: Optional[str] = None, figsize: tuple = (10, 10)) -> None:
 
     missing_columns = [col for col in columns if col not in data.columns]
     if missing_columns:
@@ -215,25 +210,79 @@ List[str], title: Optional[str] = None) -> None:
 
     colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#c2c2f0', '#ffb3e6']
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=figsize)
 
     for i, feature in enumerate(columns):
         left = 0
         for j, (category, value) in enumerate(percentages[feature].items()):
-            ax.barh(i, value * 100, left=left, color=colors[j % len(colors)])
-            text_val = f'{category}\n{value * 100:.2f}%' if value*100 < 200 \
-                else ''
-            ax.text(left + value * 100 / 2, i,
-                    text_val,
-                    ha='center', va='center', color='black', fontsize=10)
+            if (value > 0.12):
+                ax.barh(i, value * 100, left=left, color=colors[j % len(colors)])
+                text_val = f'{category}\n{value * 100:.2f}%' if value*100 < 200 \
+                    else ''
+                ax.text(left + value * 100 / 2, i,
+                        text_val,
+                        ha='center', va='center', color='black', fontsize=10)
 
-            left += value * 100
+                left += value * 100
+            else:
+                ax.barh(i, value * 100, left=left, color=colors[j % len(colors)])
+                text_val = ''
+                ax.text(left + value * 100 / 2, i,
+                        text_val,
+                        ha='center', va='center', color='black', fontsize=7)
+
+                left += value * 100
 
     ax.set_yticks(np.arange(len(columns)))
     ax.set_yticklabels(columns)
 
     ax.set_xlabel('Percentage')
     ax.set_title(title)
+
+    # Display the plot
+    plt.tight_layout()
+    plt.show()
+
+
+def horizontal_binary_distribution(data: pd.DataFrame, columns:
+List[str], title: Optional[str] = None, figsize: tuple = (10, 10)) -> None:
+    # Check for missing columns
+    missing_columns = [col for col in columns if col not in data.columns]
+    if missing_columns:
+        raise ValueError(f"The following columns are not in the DataFrame: {missing_columns}")
+
+    # Calculate percentages
+    percentages = {}
+    for feature in columns:
+        percentages[feature] = data[feature].value_counts(normalize=True)
+
+    # Sort by the percentage of 0 in descending order
+    sorted_columns = sorted(columns, key=lambda col: percentages[col].get(0, 0), reverse=True)
+
+    # Define colors for 0 and 1
+    colors = ['#66b3ff', '#ff9999']  # 0 = blue, 1 = red
+
+    # Create the plot
+    fig, ax = plt.subplots(figsize=figsize)
+    for i, feature in enumerate(sorted_columns):
+        left = 0
+        for j, value in enumerate([percentages[feature].get(0, 0), percentages[feature].get(1, 0)]):
+            # Plot the bar
+            ax.barh(i, value * 100, left=left, color=colors[j])
+
+            # Add the percentage text
+            ax.text(left + value * 100 / 2, i, f'{value * 100:.1f}%',
+                    ha='center', va='center', color='black', fontsize=10)
+            left += value * 100
+
+    # Add labels and titles
+    ax.set_yticks(np.arange(len(sorted_columns)))
+    ax.set_yticklabels(sorted_columns)
+    ax.set_xlabel('Percentage')
+    ax.set_title(title if title else 'Feature Distribution')
+
+    # Add legend for 0 and 1
+    ax.legend(['0', '1'], loc='upper right', title='Category')
 
     # Display the plot
     plt.tight_layout()

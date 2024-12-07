@@ -1,5 +1,5 @@
 from typing import Dict
-
+import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
@@ -43,6 +43,7 @@ class OneHotEncoderWithKeys(BaseEstimator, TransformerMixin):
                            axis=1)
 
         return result
+
 
 
 # Aggregating to bureau and previous_application
@@ -202,3 +203,231 @@ class MergePipelineOutputWithMainTable(BaseEstimator, TransformerMixin):
         pipeline_output = self.pipeline.transform(X)
         merged_table = self.main_table.merge(pipeline_output, on=self.key_column, how='left')
         return merged_table
+
+
+class FrequencyEncoder(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.freq_map_ = {}
+
+    def fit(self, X, y=None):
+        X = pd.DataFrame(X)
+        self.freq_map_ = {
+            col: X[col].value_counts(normalize=True, dropna=True).to_dict()
+            for col in X.columns
+        }
+        return self
+
+    def transform(self, X):
+        X = pd.DataFrame(X)
+        X_transformed = X.copy()
+        for col in X.columns:
+            X_transformed[col] = X[col].map(self.freq_map_[col])
+        return X_transformed.values
+
+    def get_feature_names_out(self, input_features=None):
+        return input_features if input_features is not None else list(self.freq_map_.keys())
+
+class FeatureCreation2(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.feature_names = None
+        self.required_columns = [
+            'SK_ID_BUREAU_count',
+            'SK_ID_PREV_count'
+            # Add other required columns here
+        ]
+
+    def fit(self, X, y=None):
+        if isinstance(X, pd.DataFrame):
+            self.feature_names = X.columns.tolist()
+        elif isinstance(X, np.ndarray):
+            self.feature_names = [f'feature_{i}' for i in range(X.shape[1])]
+        return self
+
+    def transform(self, X):
+        if isinstance(X, np.ndarray):
+            X = pd.DataFrame(X, columns=self.feature_names)
+        elif isinstance(X, pd.DataFrame):
+            self.feature_names = X.columns.tolist()
+
+        X_transformed = X.copy()
+
+        X_transformed['BUREAU_ID'] = np.where(X_transformed['SK_ID_BUREAU_count'] == 0, 0, 1)
+        X_transformed['PREV_ID'] = np.where(X_transformed['SK_ID_PREV_count'] == 0, 0, 1)
+
+        # Debt-to-Income Ratio
+        X_transformed['Debt_to_Income'] = (X_transformed['AMT_CREDIT'] /
+                                           X_transformed['AMT_INCOME_TOTAL'])
+
+        # Annuity-to-Income Ratio
+        X_transformed['Annuity_to_Income'] = (X_transformed['AMT_ANNUITY'] /
+                                              X_transformed['AMT_INCOME_TOTAL'])
+
+        # Age Buckets
+        X_transformed['AGE_BIN'] = pd.cut(
+            X_transformed['DAYS_BIRTH'] / -365,
+            bins=[20, 30, 40, 50, 60, 70],
+            labels=[2, 3, 4, 5, 6]
+        ).astype(int)
+
+        #time based series
+        # Days Employed to Age Ratio
+        days_birth = X_transformed['DAYS_BIRTH'].replace(0, np.nan)
+        X_transformed['Employment_Age_Ratio'] = (
+                abs(X_transformed['DAYS_EMPLOYED']) /
+                abs(days_birth)
+        )
+
+        # Registration Stability
+        days_employed = X_transformed['DAYS_EMPLOYED'].replace(0, np.nan)
+        X_transformed['Registration_Employed_Ratio'] = (
+                abs(X_transformed['DAYS_REGISTRATION']) /
+                abs(days_employed)
+        )
+
+        #document and contact features
+        # Document Completion Rate
+        doc_columns = [col for col in X_transformed.columns if 'FLAG_DOCUMENT' in col]
+        X_transformed['Document_Completion_Rate'] = (
+                X_transformed[doc_columns].sum(axis=1) /
+                len(doc_columns)
+        )
+
+        # Contact Availability
+        contact_columns = ['FLAG_MOBIL', 'FLAG_EMP_PHONE', 'FLAG_WORK_PHONE',
+                           'FLAG_CONT_MOBILE', 'FLAG_PHONE', 'FLAG_EMAIL']
+        X_transformed['Contact_Availability_Rate'] = (
+                X_transformed[contact_columns].sum(axis=1) /
+                len(contact_columns)
+        )
+
+        # Complex interaction features
+        # Income to Credit Ratios with Employment
+        amt_credit = X_transformed['AMT_CREDIT'].replace(0, np.nan)
+        X_transformed['Income_Credit_Employment'] = (
+                X_transformed['AMT_INCOME_TOTAL'] *
+                abs(X_transformed['DAYS_EMPLOYED']) /
+                amt_credit
+        )
+
+
+        #social and external features
+        # Social Circle Risk
+        X_transformed['Social_Circle_Risk'] = (
+                (X_transformed['DEF_30_CNT_SOCIAL_CIRCLE'] +
+                 X_transformed['DEF_60_CNT_SOCIAL_CIRCLE']) /
+                (X_transformed['OBS_30_CNT_SOCIAL_CIRCLE'] +
+                 X_transformed['OBS_60_CNT_SOCIAL_CIRCLE'] + 1)
+        )
+
+        # External Source Score Average
+        ext_source_cols = ['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3']
+        X_transformed['EXT_SOURCE_MEAN'] = X_transformed[ext_source_cols].mean(axis=1)
+        X_transformed['EXT_SOURCE_STD'] = X_transformed[ext_source_cols].std(axis=1)
+
+        return X_transformed
+
+    def get_feature_names_out(self, input_features=None):
+        created_features = [
+            'BUREAU_ID',
+            'PREV_ID',
+            'Debt_to_Income',
+            'Annuity_to_Income',
+            'AGE_BIN',
+
+            # Time-based Features
+            'Employment_Age_Ratio',
+            'Registration_Employed_Ratio',
+
+            # Document and Contact Features
+            'Document_Completion_Rate',
+            'Contact_Availability_Rate',
+
+            # Complex Interaction Features
+            'Income_Credit_Employment',
+
+            # Social and External Features
+            'Social_Circle_Risk',
+            'EXT_SOURCE_MEAN',
+            'EXT_SOURCE_STD'
+        ]
+
+        if input_features is None and self.feature_names is None:
+            raise ValueError("Transformer has not been fitted yet. Call 'fit' before using this estimator.")
+
+        if input_features is None:
+            input_features = self.feature_names
+
+        if input_features is not None:
+            return input_features + created_features
+        return created_features
+
+class FeatureCreation(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X_transformed = X.copy()
+
+        X['BUREAU_ID'] = np.where(X['SK_ID_BUREAU_count'] == 0, 0, 1)
+        X['PREV_ID'] = np.where(X['SK_ID_PREV_count'] == 0, 0, 1)
+
+        # Debt-to-Income Ratio
+        X_transformed['Debt_to_Income'] = (X_transformed['AMT_CREDIT'] /
+                                           X_transformed['AMT_INCOME_TOTAL'])
+
+        # Annuity-to-Income Ratio
+        X_transformed['Annuity_to_Income'] = (X_transformed['AMT_ANNUITY'] /
+                                              X_transformed['AMT_INCOME_TOTAL'])
+
+        # Age Buckets
+        X_transformed['AGE_BIN'] = pd.cut(
+            X_transformed['DAYS_BIRTH'] / -365,
+            bins=[20, 30, 40, 50, 60, 70],
+            labels=[2, 3, 4, 5, 6]
+        ).astype(int)
+
+        return X_transformed
+
+    def get_feature_names_out(self, input_features=None):
+        created_features = [
+            'BUREAU_ID',
+            'PREV_ID',
+            'Debt_to_Income',
+            'Annuity_to_Income',
+            'AGE_BIN'
+        ]
+
+        if input_features is not None:
+            return input_features + created_features
+        return created_features
+
+class InitialFeatureCreation(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+        # Create binary features for presence/absence
+        X['BUREAU_ID'] = np.where(X['SK_ID_BUREAU_count'] == 0, 0, 1)
+        X['PREV_ID'] = np.where(X['SK_ID_PREV_count'] == 0, 0, 1)
+        return X
+
+
+class StripPrefixTransformer(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        # Convert to DataFrame and check for column names
+        X = pd.DataFrame(X)
+
+        #if all(isinstance(col, int) for col in X.columns):
+            #raise ValueError(
+              #  "StripPrefixTransformer expects named columns. Ensure
+        #  previous steps retain column names."
+          #  )
+
+        # Strip prefixes
+        X.columns = [str(col).split('__')[-1] for col in X.columns]
+        return X
+
