@@ -5,7 +5,6 @@ import datetime
 
 import pandas as pd
 
-from utils.custom_preprocessor import OneHotEncoderWithKeys
 from sklearn.preprocessing import OrdinalEncoder
 
 def encode_object_columns_with_ordinal_optimized(df: pd.DataFrame, key_column: str) -> pd.DataFrame:
