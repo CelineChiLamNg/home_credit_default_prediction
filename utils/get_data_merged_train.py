@@ -34,7 +34,7 @@ def encode_object_columns_with_ordinal_optimized(df: pd.DataFrame, key_column: s
 
         # Initialize OrdinalEncoder
         print(f"[{datetime.datetime.now()}] Initializing OrdinalEncoder...")
-        encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+        encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=np.nan)
 
         # Perform encoding
         print(f"[{datetime.datetime.now()}] Performing encoding transformation...")
@@ -85,10 +85,11 @@ def process_bureau(bureau_transformed: pd.DataFrame) -> pd.DataFrame:
     print(f"[{datetime.datetime.now()}] Found {len(numeric_cols)} numeric columns for aggregation")
 
     # Step 3: Aggregate by SK_ID_CURR
-    print(f"[{datetime.datetime.now()}] Performing bureau aggregation...")
+    print(f"[{datetime.datetime.now()}] Performing aggregation...")
     agg_funcs: List[str] = ['mean', 'sum', 'min', 'max', 'count']
     bureau_aggregated = bureau_cleaned.groupby('SK_ID_CURR').agg(
-        {col: agg_funcs for col in bureau_cleaned.columns if col not in ['SK_ID_CURR', 'SK_ID_BUREAU_count']}
+        {col: agg_funcs for col in bureau_cleaned.columns if col not in [
+            'SK_ID_CURR', 'SK_ID_BUREAU_count']}
     ).reset_index()
     print(f"[{datetime.datetime.now()}] Aggregated bureau shape: {bureau_aggregated.shape}")
 
@@ -151,7 +152,8 @@ def process_previous_application(previous_application_transformed: pd.DataFrame)
     print(f"[{datetime.datetime.now()}] Performing aggregation...")
     agg_funcs: List[str] = ['mean', 'sum', 'min', 'max', 'count']
     previous_aggregated = previous_cleaned.groupby('SK_ID_CURR').agg(
-        {col: agg_funcs for col in previous_cleaned.columns if col not in ['SK_ID_CURR', 'SK_ID_BUREAU_count']}
+        {col: agg_funcs for col in previous_cleaned.columns if col not in [
+            'SK_ID_CURR', 'SK_ID_PREV_count']}
     ).reset_index()
     print(f"[{datetime.datetime.now()}] Aggregated previous application shape: {previous_aggregated.shape}")
 

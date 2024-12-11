@@ -45,6 +45,7 @@ class OneHotEncoderWithKeys(BaseEstimator, TransformerMixin):
         return result
 
 
+
 # Aggregating to bureau and previous_application
 class BureauBalanceAggregator(BaseEstimator, TransformerMixin):
     def __init__(self, agg_funcs=['mean', 'sum', 'min', 'max', 'count']):
