@@ -2,9 +2,7 @@ from typing import List, Dict
 import pandas as pd
 import numpy as np
 import datetime
-
 import pandas as pd
-
 from sklearn.preprocessing import OrdinalEncoder
 
 def encode_object_columns_with_ordinal_optimized(df: pd.DataFrame, key_column: str) -> pd.DataFrame:
