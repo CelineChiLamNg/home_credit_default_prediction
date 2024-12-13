@@ -215,7 +215,7 @@ List[str], title: Optional[str] = None) -> None:
 
     colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#c2c2f0', '#ffb3e6']
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(10, 10))
 
     for i, feature in enumerate(columns):
         left = 0
@@ -234,6 +234,51 @@ List[str], title: Optional[str] = None) -> None:
 
     ax.set_xlabel('Percentage')
     ax.set_title(title)
+
+    # Display the plot
+    plt.tight_layout()
+    plt.show()
+
+
+def horizontal_binary_distribution(data: pd.DataFrame, columns:
+List[str], title: Optional[str] = None) -> None:
+    # Check for missing columns
+    missing_columns = [col for col in columns if col not in data.columns]
+    if missing_columns:
+        raise ValueError(f"The following columns are not in the DataFrame: {missing_columns}")
+
+    # Calculate percentages
+    percentages = {}
+    for feature in columns:
+        percentages[feature] = data[feature].value_counts(normalize=True)
+
+    # Sort by the percentage of 0 in descending order
+    sorted_columns = sorted(columns, key=lambda col: percentages[col].get(0, 0), reverse=True)
+
+    # Define colors for 0 and 1
+    colors = ['#66b3ff', '#ff9999']  # 0 = blue, 1 = red
+
+    # Create the plot
+    fig, ax = plt.subplots(figsize=(10, 10))
+    for i, feature in enumerate(sorted_columns):
+        left = 0
+        for j, value in enumerate([percentages[feature].get(0, 0), percentages[feature].get(1, 0)]):
+            # Plot the bar
+            ax.barh(i, value * 100, left=left, color=colors[j])
+
+            # Add the percentage text
+            ax.text(left + value * 100 / 2, i, f'{value * 100:.1f}%',
+                    ha='center', va='center', color='black', fontsize=10)
+            left += value * 100
+
+    # Add labels and titles
+    ax.set_yticks(np.arange(len(sorted_columns)))
+    ax.set_yticklabels(sorted_columns)
+    ax.set_xlabel('Percentage')
+    ax.set_title(title if title else 'Feature Distribution')
+
+    # Add legend for 0 and 1
+    ax.legend(['0', '1'], loc='upper right', title='Category')
 
     # Display the plot
     plt.tight_layout()
