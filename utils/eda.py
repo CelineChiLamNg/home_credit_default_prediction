@@ -111,12 +111,11 @@ None, nrows: int = 1, ncols: int = 1) -> None:
     plt.tight_layout()
     plt.show()
 
-def percentage_subplots(data: pd.DataFrame, columns:List[str], title: Optional[
+def percentage_subplots(data: pd.DataFrame, columns: List[str], title: Optional[
     str] = None, nrows: int = 1, ncols: int = 1) -> None:
 
-
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols*5,
-                                                                nrows*4))
+    # Adjust the height based on the number of rows
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols * 6, nrows * 6))
     fig.subplots_adjust(hspace=1, wspace=0.4)
 
     if np.ndim(axes) == 0:
@@ -128,23 +127,19 @@ def percentage_subplots(data: pd.DataFrame, columns:List[str], title: Optional[
     df_len = data.shape[0]
     axes_len = len(axes_flatten)
 
-
     for i, col in enumerate(columns):
-        sns.countplot(data=data, x=col, ax=axes_flatten[i])
+        sns.countplot(data=data, y=col, ax=axes_flatten[i], orient='h')  # Horizontal plot
         axes_flatten[i].set_title(col, pad=15)
         for p in axes_flatten[i].patches:
-            percentage = round((p.get_height() * 100 / df_len), 2)
+            percentage = round((p.get_width() * 100 / df_len), 2)
             (axes_flatten[i]
              .annotate(f'{percentage}%',
-                       (p.get_x() + p.get_width() / 2., p
-                        .get_height()), ha='center',
-                       va='center', xytext=(0, 10),
+                       (p.get_width(), p.get_y() + p.get_height() / 2.),
+                       ha='center', va='center', xytext=(10, 0),
                        textcoords='offset points'))
         sns.despine(top=True, right=True, left=True, bottom=True)
-        axes_flatten[i].tick_params(axis='x', which='both', length=0,
-                                    labelbottom=True)
-        axes_flatten[i].tick_params(axis='y', which='both', length=0,
-                                    labelleft=False)
+        axes_flatten[i].tick_params(axis='y', which='both', length=0, labelleft=True)
+        axes_flatten[i].tick_params(axis='x', which='both', length=0, labelbottom=False)
         axes_flatten[i].set(ylabel=None, xlabel=None)
 
     if col_len < axes_len:
@@ -220,14 +215,23 @@ List[str], title: Optional[str] = None) -> None:
     for i, feature in enumerate(columns):
         left = 0
         for j, (category, value) in enumerate(percentages[feature].items()):
-            ax.barh(i, value * 100, left=left, color=colors[j % len(colors)])
-            text_val = f'{category}\n{value * 100:.2f}%' if value*100 < 200 \
-                else ''
-            ax.text(left + value * 100 / 2, i,
-                    text_val,
-                    ha='center', va='center', color='black', fontsize=10)
+            if (value > 0.12):
+                ax.barh(i, value * 100, left=left, color=colors[j % len(colors)])
+                text_val = f'{category}\n{value * 100:.2f}%' if value*100 < 200 \
+                    else ''
+                ax.text(left + value * 100 / 2, i,
+                        text_val,
+                        ha='center', va='center', color='black', fontsize=10)
 
-            left += value * 100
+                left += value * 100
+            else:
+                ax.barh(i, value * 100, left=left, color=colors[j % len(colors)])
+                text_val = ''
+                ax.text(left + value * 100 / 2, i,
+                        text_val,
+                        ha='center', va='center', color='black', fontsize=7)
+
+                left += value * 100
 
     ax.set_yticks(np.arange(len(columns)))
     ax.set_yticklabels(columns)
