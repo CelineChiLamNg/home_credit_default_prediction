@@ -198,7 +198,7 @@ def stacked_bar_plot(df: pd.DataFrame, col: str, hue: str,
 
 
 def stacked_horizontal_feature_distribution(data: pd.DataFrame, columns:
-List[str], title: Optional[str] = None) -> None:
+List[str], title: Optional[str] = None, figsize: tuple = (10, 10)) -> None:
 
     missing_columns = [col for col in columns if col not in data.columns]
     if missing_columns:
@@ -210,7 +210,7 @@ List[str], title: Optional[str] = None) -> None:
 
     colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#c2c2f0', '#ffb3e6']
 
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=figsize)
 
     for i, feature in enumerate(columns):
         left = 0
