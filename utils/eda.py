@@ -245,7 +245,7 @@ List[str], title: Optional[str] = None, figsize: tuple = (10, 10)) -> None:
 
 
 def horizontal_binary_distribution(data: pd.DataFrame, columns:
-List[str], title: Optional[str] = None) -> None:
+List[str], title: Optional[str] = None, figsize: tuple = (10, 10)) -> None:
     # Check for missing columns
     missing_columns = [col for col in columns if col not in data.columns]
     if missing_columns:
@@ -263,7 +263,7 @@ List[str], title: Optional[str] = None) -> None:
     colors = ['#66b3ff', '#ff9999']  # 0 = blue, 1 = red
 
     # Create the plot
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=figsize)
     for i, feature in enumerate(sorted_columns):
         left = 0
         for j, value in enumerate([percentages[feature].get(0, 0), percentages[feature].get(1, 0)]):
