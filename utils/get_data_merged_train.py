@@ -113,7 +113,6 @@ def process_bureau(bureau_transformed: pd.DataFrame) -> pd.DataFrame:
     bureau_transformed_final: pd.DataFrame = bureau_aggregated.merge(
         bureau_counts, left_on='SK_ID_CURR_', right_on='SK_ID_CURR',
         how='left')
-
     print(f"[{datetime.datetime.now()}] Bureau processing completed. Final shape: {bureau_transformed_final.shape}")
     return bureau_transformed_final
 
@@ -230,6 +229,8 @@ def get_data_merged_train(
     
     print(f"\n[{datetime.datetime.now()}] Performing final merge with main table...")
     merged_train: pd.DataFrame = merge_with_main_table(train_splits['data_train'], bureau_final, previous_final)
+    merged_train['SK_ID_PREV_count'] = merged_train['SK_ID_PREV_count'].fillna(0)
+    merged_train['SK_ID_BUREAU_count'] = merged_train['SK_ID_BUREAU_count'].fillna(0)
     print(f"[{datetime.datetime.now()}] Data merge train process completed successfully!")
     return merged_train
 
