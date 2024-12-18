@@ -178,11 +178,6 @@ def merge_with_main_table(
         bureau_transformed: pd.DataFrame,
         previous_application_transformed: pd.DataFrame
 ) -> pd.DataFrame:
-    print(f"\n[{datetime.datetime.now()}] === Starting final merging process ===")
-    print(f"[{datetime.datetime.now()}] Main table shape: {main_table.shape}")
-    print(f"[{datetime.datetime.now()}] Bureau transformed shape: {bureau_transformed.shape}")
-    print(f"[{datetime.datetime.now()}] Previous application transformed shape: {previous_application_transformed.shape}")
-
     # Step 1: Merge bureau_transformed_final into main table
     print(f"[{datetime.datetime.now()}] Merging bureau data with main table...")
     merged_with_bureau: pd.DataFrame = main_table.merge(bureau_transformed, on='SK_ID_CURR', how='left')
@@ -231,6 +226,10 @@ def get_data_merged_train(
     merged_train: pd.DataFrame = merge_with_main_table(train_splits['data_train'], bureau_final, previous_final)
     merged_train['SK_ID_PREV_count'] = merged_train['SK_ID_PREV_count'].fillna(0)
     merged_train['SK_ID_BUREAU_count'] = merged_train['SK_ID_BUREAU_count'].fillna(0)
+    print(f"\nSK_ID_BUREAU_count missing values:"
+          f" {merged_train['SK_ID_BUREAU_count'].isnull().sum()} ")
+    print(f"\nSK_ID_PREV_count missing values: "
+          f"{merged_train['SK_ID_PREV_count'].isnull().sum()}")
     print(f"[{datetime.datetime.now()}] Data merge train process completed successfully!")
     return merged_train
 
