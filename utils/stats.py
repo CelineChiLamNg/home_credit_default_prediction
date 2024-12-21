@@ -52,7 +52,10 @@ def calculate_confidence_intervals(contingency_table, alpha=0.05):
     ci_df = pd.DataFrame(confidence_intervals, columns=['Group', 'Proportion', 'CI Lower', 'CI Upper'])
     return ci_df
 
-def plot_confidence_intervals(ci_df, xlabel='Group', ylabel='Proportion of Defaults (TARGET=1)', title='Confidence Intervals'):
+def plot_confidence_intervals(ci_df, xlabel='Group', ylabel='Proportion of '
+                                                            'Defaults ('
+                                                            'TARGET=1)',
+                              title='Confidence Intervals', figsize=(4, 3)):
     """
     Plot confidence intervals for proportions.
 
@@ -62,7 +65,7 @@ def plot_confidence_intervals(ci_df, xlabel='Group', ylabel='Proportion of Defau
         ylabel (str): Label for the y-axis.
         title (str): Title for the plot.
     """
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=figsize)
     plt.errorbar(ci_df['Group'], ci_df['Proportion'],
                  yerr=[ci_df['Proportion'] - ci_df['CI Lower'], ci_df['CI Upper'] - ci_df['Proportion']],
                  fmt='o', capsize=5, label='95% CI')
