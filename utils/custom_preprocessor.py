@@ -203,3 +203,25 @@ class MergePipelineOutputWithMainTable(BaseEstimator, TransformerMixin):
         pipeline_output = self.pipeline.transform(X)
         merged_table = self.main_table.merge(pipeline_output, on=self.key_column, how='left')
         return merged_table
+
+
+class FrequencyEncoder(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.freq_map_ = {}
+
+    def fit(self, X, y=None):
+        X = pd.DataFrame(X)
+        self.freq_map_ = {
+            col: X[col].value_counts(normalize=True, dropna=True).to_dict()
+            for col in X.columns
+        }
+        return self
+
+    def transform(self, X):
+        # Ensure X is a DataFrame
+        X = pd.DataFrame(X)
+        # Apply the frequency map to each column
+        X_transformed = X.copy()
+        for col in X.columns:
+            X_transformed[col] = X[col].map(self.freq_map_[col])
+        return X_transformed.values
