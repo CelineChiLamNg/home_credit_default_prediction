@@ -1,5 +1,5 @@
 from typing import Dict
-
+import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
@@ -207,21 +207,52 @@ class MergePipelineOutputWithMainTable(BaseEstimator, TransformerMixin):
 
 class FrequencyEncoder(BaseEstimator, TransformerMixin):
     def __init__(self):
-        self.freq_map_ = {}
+        self.freq_dicts = {}
 
     def fit(self, X, y=None):
-        X = pd.DataFrame(X)
-        self.freq_map_ = {
-            col: X[col].value_counts(normalize=True, dropna=True).to_dict()
-            for col in X.columns
-        }
+        for col in X.columns:
+            self.freq_dicts[col] = X[col].value_counts(normalize=True).to_dict()
         return self
 
     def transform(self, X):
-        # Ensure X is a DataFrame
-        X = pd.DataFrame(X)
-        # Apply the frequency map to each column
         X_transformed = X.copy()
         for col in X.columns:
-            X_transformed[col] = X[col].map(self.freq_map_[col])
-        return X_transformed.values
+            X_transformed[col] = X[col].map(self.freq_dicts[col]).fillna(0)
+        return X_transformed
+
+    def get_feature_names_out(self, input_features=None):
+        # Returns the names of the columns after transformation
+        return input_features if input_features is not None else list(self.freq_dicts.keys())
+
+
+
+class FeatureCreation(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X_transformed = X.copy()
+
+        # Create BUREAU_ID and PREV_ID
+        X_transformed['BUREAU_ID'] = np.where(X_transformed['SK_ID_BUREAU_count'] > 0, 1, 0)
+        X_transformed['PREV_ID'] = np.where(X_transformed['SK_ID_PREV_count'] > 0, 1, 0)
+
+        # Debt-to-Income Ratio
+        X_transformed['Debt_to_Income'] = (X_transformed['AMT_CREDIT'] /
+                                           X_transformed['AMT_INCOME_TOTAL'])
+
+        # Annuity-to-Income Ratio
+        X_transformed['Annuity_to_Income'] = (X_transformed['AMT_ANNUITY'] /
+                                              X_transformed['AMT_INCOME_TOTAL'])
+
+        # Credit-to-Goods Price Ratio
+        X_transformed['Credit_to_Goods'] = X_transformed['AMT_CREDIT'] / X_transformed['AMT_GOODS_PRICE']
+
+        # Age Buckets
+        X_transformed['AGE_BIN'] = pd.cut(
+            X_transformed['DAYS_BIRTH'] / -365,
+            bins=[20, 30, 40, 50, 60, 70],
+            labels=['20-30', '30-40', '40-50', '50-60', '60-70']
+        )
+
+        return X_transformed

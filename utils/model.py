@@ -16,7 +16,7 @@ def evaluate_model(model, X_test, y_test):
 
 def prep_train_eval(
     preprocessor: Pipeline, X: pd.DataFrame, y: pd.Series
-) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]
+) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series] :
     """splits the data_csv into train/eval and preprocesses.
 
     Parameters
