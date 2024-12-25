@@ -207,23 +207,25 @@ class MergePipelineOutputWithMainTable(BaseEstimator, TransformerMixin):
 
 class FrequencyEncoder(BaseEstimator, TransformerMixin):
     def __init__(self):
-        self.freq_dicts = {}
+        self.freq_map_ = {}
 
     def fit(self, X, y=None):
-        for col in X.columns:
-            self.freq_dicts[col] = X[col].value_counts(normalize=True).to_dict()
+        X = pd.DataFrame(X)
+        self.freq_map_ = {
+            col: X[col].value_counts(normalize=True, dropna=True).to_dict()
+            for col in X.columns
+        }
         return self
 
     def transform(self, X):
+        X = pd.DataFrame(X)
         X_transformed = X.copy()
         for col in X.columns:
-            X_transformed[col] = X[col].map(self.freq_dicts[col]).fillna(0)
-        return X_transformed
+            X_transformed[col] = X[col].map(self.freq_map_[col])
+        return X_transformed.values
 
     def get_feature_names_out(self, input_features=None):
-        # Returns the names of the columns after transformation
-        return input_features if input_features is not None else list(self.freq_dicts.keys())
-
+        return input_features if input_features is not None else list(self.freq_map_.keys())
 
 
 class FeatureCreation(BaseEstimator, TransformerMixin):
@@ -245,9 +247,6 @@ class FeatureCreation(BaseEstimator, TransformerMixin):
         X_transformed['Annuity_to_Income'] = (X_transformed['AMT_ANNUITY'] /
                                               X_transformed['AMT_INCOME_TOTAL'])
 
-        # Credit-to-Goods Price Ratio
-        X_transformed['Credit_to_Goods'] = X_transformed['AMT_CREDIT'] / X_transformed['AMT_GOODS_PRICE']
-
         # Age Buckets
         X_transformed['AGE_BIN'] = pd.cut(
             X_transformed['DAYS_BIRTH'] / -365,
@@ -256,3 +255,25 @@ class FeatureCreation(BaseEstimator, TransformerMixin):
         )
 
         return X_transformed
+
+    def get_feature_names_out(self, input_features=None):
+        created_features = [
+            'BUREAU_ID',
+            'PREV_ID',
+            'Debt_to_Income',
+            'Annuity_to_Income',
+            'AGE_BIN'
+        ]
+
+        if input_features is not None:
+            return input_features + created_features
+        return created_features
+
+class StripPrefixTransformer(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = pd.DataFrame(X)
+        X.columns = [col.split('__')[-1] for col in X.columns]
+        return X
