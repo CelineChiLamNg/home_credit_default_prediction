@@ -235,9 +235,8 @@ class FeatureCreation(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_transformed = X.copy()
 
-        # Create BUREAU_ID and PREV_ID
-        X_transformed['BUREAU_ID'] = np.where(X_transformed['SK_ID_BUREAU_count'] > 0, 1, 0)
-        X_transformed['PREV_ID'] = np.where(X_transformed['SK_ID_PREV_count'] > 0, 1, 0)
+        X['BUREAU_ID'] = np.where(X['SK_ID_BUREAU_count'] == 0, 0, 1)
+        X['PREV_ID'] = np.where(X['SK_ID_PREV_count'] == 0, 0, 1)
 
         # Debt-to-Income Ratio
         X_transformed['Debt_to_Income'] = (X_transformed['AMT_CREDIT'] /
@@ -251,8 +250,8 @@ class FeatureCreation(BaseEstimator, TransformerMixin):
         X_transformed['AGE_BIN'] = pd.cut(
             X_transformed['DAYS_BIRTH'] / -365,
             bins=[20, 30, 40, 50, 60, 70],
-            labels=['20-30', '30-40', '40-50', '50-60', '60-70']
-        )
+            labels=[2, 3, 4, 5, 6]
+        ).astype(int)
 
         return X_transformed
 
@@ -269,11 +268,32 @@ class FeatureCreation(BaseEstimator, TransformerMixin):
             return input_features + created_features
         return created_features
 
+class InitialFeatureCreation(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+        # Create binary features for presence/absence
+        X['BUREAU_ID'] = np.where(X['SK_ID_BUREAU_count'] == 0, 0, 1)
+        X['PREV_ID'] = np.where(X['SK_ID_PREV_count'] == 0, 0, 1)
+        return X
+
+
 class StripPrefixTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
+        # Convert to DataFrame and check for column names
         X = pd.DataFrame(X)
-        X.columns = [col.split('__')[-1] for col in X.columns]
+
+        #if all(isinstance(col, int) for col in X.columns):
+            #raise ValueError(
+              #  "StripPrefixTransformer expects named columns. Ensure
+        #  previous steps retain column names."
+          #  )
+
+        # Strip prefixes
+        X.columns = [str(col).split('__')[-1] for col in X.columns]
         return X
