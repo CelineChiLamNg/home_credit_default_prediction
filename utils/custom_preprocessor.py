@@ -228,6 +228,117 @@ class FrequencyEncoder(BaseEstimator, TransformerMixin):
         return input_features if input_features is not None else list(self.freq_map_.keys())
 
 
+class FeatureCreation2(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X_transformed = X.copy()
+
+        X['BUREAU_ID'] = np.where(X['SK_ID_BUREAU_count'] == 0, 0, 1)
+        X['PREV_ID'] = np.where(X['SK_ID_PREV_count'] == 0, 0, 1)
+
+        # Debt-to-Income Ratio
+        X_transformed['Debt_to_Income'] = (X_transformed['AMT_CREDIT'] /
+                                           X_transformed['AMT_INCOME_TOTAL'])
+
+        # Annuity-to-Income Ratio
+        X_transformed['Annuity_to_Income'] = (X_transformed['AMT_ANNUITY'] /
+                                              X_transformed['AMT_INCOME_TOTAL'])
+
+        # Age Buckets
+        X_transformed['AGE_BIN'] = pd.cut(
+            X_transformed['DAYS_BIRTH'] / -365,
+            bins=[20, 30, 40, 50, 60, 70],
+            labels=[2, 3, 4, 5, 6]
+        ).astype(int)
+
+        #time based series
+        # Days Employed to Age Ratio
+        days_birth = X_transformed['DAYS_BIRTH'].replace(0, np.nan)
+        X_transformed['Employment_Age_Ratio'] = (
+                abs(X_transformed['DAYS_EMPLOYED']) /
+                abs(days_birth)
+        )
+
+        # Registration Stability
+        days_employed = X_transformed['DAYS_EMPLOYED'].replace(0, np.nan)
+        X_transformed['Registration_Employed_Ratio'] = (
+                abs(X_transformed['DAYS_REGISTRATION']) /
+                abs(days_employed)
+        )
+
+        #document and contact features
+        # Document Completion Rate
+        doc_columns = [col for col in X_transformed.columns if 'FLAG_DOCUMENT' in col]
+        X_transformed['Document_Completion_Rate'] = (
+                X_transformed[doc_columns].sum(axis=1) /
+                len(doc_columns)
+        )
+
+        # Contact Availability
+        contact_columns = ['FLAG_MOBIL', 'FLAG_EMP_PHONE', 'FLAG_WORK_PHONE',
+                           'FLAG_CONT_MOBILE', 'FLAG_PHONE', 'FLAG_EMAIL']
+        X_transformed['Contact_Availability_Rate'] = (
+                X_transformed[contact_columns].sum(axis=1) /
+                len(contact_columns)
+        )
+
+        # Complex interaction features
+        # Income to Credit Ratios with Employment
+        amt_credit = X_transformed['AMT_CREDIT'].replace(0, np.nan)
+        X_transformed['Income_Credit_Employment'] = (
+                X_transformed['AMT_INCOME_TOTAL'] *
+                abs(X_transformed['DAYS_EMPLOYED']) /
+                amt_credit
+        )
+
+
+        #social and external features
+        # Social Circle Risk
+        X_transformed['Social_Circle_Risk'] = (
+                (X_transformed['DEF_30_CNT_SOCIAL_CIRCLE'] +
+                 X_transformed['DEF_60_CNT_SOCIAL_CIRCLE']) /
+                (X_transformed['OBS_30_CNT_SOCIAL_CIRCLE'] +
+                 X_transformed['OBS_60_CNT_SOCIAL_CIRCLE'] + 1)
+        )
+
+        # External Source Score Average
+        ext_source_cols = ['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3']
+        X_transformed['EXT_SOURCE_MEAN'] = X_transformed[ext_source_cols].mean(axis=1)
+        X_transformed['EXT_SOURCE_STD'] = X_transformed[ext_source_cols].std(axis=1)
+
+        return X_transformed
+
+    def get_feature_names_out(self, input_features=None):
+        created_features = [
+            'BUREAU_ID',
+            'PREV_ID',
+            'Debt_to_Income',
+            'Annuity_to_Income',
+            'AGE_BIN',
+
+            # Time-based Features
+            'Employment_Age_Ratio',
+            'Registration_Employed_Ratio',
+
+            # Document and Contact Features
+            'Document_Completion_Rate',
+            'Contact_Availability_Rate',
+
+            # Complex Interaction Features
+            'Income_Credit_Employment',
+
+            # Social and External Features
+            'Social_Circle_Risk',
+            'EXT_SOURCE_MEAN',
+            'EXT_SOURCE_STD'
+        ]
+
+        if input_features is not None:
+            return input_features + created_features
+        return created_features
+
 class FeatureCreation(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
