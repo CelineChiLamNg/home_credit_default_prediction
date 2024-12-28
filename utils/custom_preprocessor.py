@@ -408,3 +408,4 @@ class StripPrefixTransformer(BaseEstimator, TransformerMixin):
         # Strip prefixes
         X.columns = [str(col).split('__')[-1] for col in X.columns]
         return X
+
