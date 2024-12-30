@@ -233,3 +233,52 @@ def get_data_merged_train(
     print(f"[{datetime.datetime.now()}] Data merge train process completed successfully!")
     return merged_train
 
+def get_data_merged_test(
+        bureau_transformed: pd.DataFrame,
+        previous_application_transformed: pd.DataFrame,
+        test_splits: Dict[str, pd.DataFrame],
+        n_rows: int = None
+) -> pd.DataFrame:
+    print(f"\n[{datetime.datetime.now()}] === Starting data merge test "
+          f"process ===")
+
+    # If n_rows is specified, subset the main training data and filter related records
+    if n_rows is not None:
+        print(f"[{datetime.datetime.now()}] Subsetting data to first {n_rows} rows...")
+        train_data_small = test_splits['data_test'].head(n_rows)
+        valid_ids = train_data_small['SK_ID_CURR'].unique()
+
+        bureau_transformed = bureau_transformed[
+            bureau_transformed['SK_ID_CURR'].isin(valid_ids)
+        ]
+        previous_application_transformed = previous_application_transformed[
+            previous_application_transformed['SK_ID_CURR'].isin(valid_ids)
+        ]
+        test_splits = {'data_test': train_data_small}
+
+        print(f"[{datetime.datetime.now()}] Subset shapes:")
+        print(f"Training data: {train_data_small.shape}")
+        print(f"Bureau data: {bureau_transformed.shape}")
+        print(f"Previous application data: {previous_application_transformed.shape}")
+
+    print(f"[{datetime.datetime.now()}] Processing bureau data...")
+    bureau_final: pd.DataFrame = process_bureau(bureau_transformed)
+
+    print(f"\n[{datetime.datetime.now()}] Processing previous application data...")
+    previous_final: pd.DataFrame = process_previous_application(previous_application_transformed)
+
+    print(f"\n[{datetime.datetime.now()}] Performing final merge with main table...")
+    merged_test: pd.DataFrame = merge_with_main_table(test_splits[
+                                                           'data_test'],
+                                                       bureau_final, previous_final)
+    merged_test['SK_ID_PREV_count'] = merged_test[
+        'SK_ID_PREV_count'].fillna(0)
+    merged_test['SK_ID_BUREAU_count'] = merged_test[
+        'SK_ID_BUREAU_count'].fillna(0)
+    print(f"\nSK_ID_BUREAU_count missing values:"
+          f" {merged_test['SK_ID_BUREAU_count'].isnull().sum()} ")
+    print(f"\nSK_ID_PREV_count missing values: "
+          f"{merged_test['SK_ID_PREV_count'].isnull().sum()}")
+    print(f"[{datetime.datetime.now()}] Data merge test process completed "
+          f"successfully!")
+    return merged_test
