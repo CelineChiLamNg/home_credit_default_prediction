@@ -227,16 +227,32 @@ class FrequencyEncoder(BaseEstimator, TransformerMixin):
     def get_feature_names_out(self, input_features=None):
         return input_features if input_features is not None else list(self.freq_map_.keys())
 
-
 class FeatureCreation2(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.feature_names = None
+        self.required_columns = [
+            'SK_ID_BUREAU_count',
+            'SK_ID_PREV_count'
+            # Add other required columns here
+        ]
+
     def fit(self, X, y=None):
+        if isinstance(X, pd.DataFrame):
+            self.feature_names = X.columns.tolist()
+        elif isinstance(X, np.ndarray):
+            self.feature_names = [f'feature_{i}' for i in range(X.shape[1])]
         return self
 
     def transform(self, X):
+        if isinstance(X, np.ndarray):
+            X = pd.DataFrame(X, columns=self.feature_names)
+        elif isinstance(X, pd.DataFrame):
+            self.feature_names = X.columns.tolist()
+
         X_transformed = X.copy()
 
-        X['BUREAU_ID'] = np.where(X['SK_ID_BUREAU_count'] == 0, 0, 1)
-        X['PREV_ID'] = np.where(X['SK_ID_PREV_count'] == 0, 0, 1)
+        X_transformed['BUREAU_ID'] = np.where(X_transformed['SK_ID_BUREAU_count'] == 0, 0, 1)
+        X_transformed['PREV_ID'] = np.where(X_transformed['SK_ID_PREV_count'] == 0, 0, 1)
 
         # Debt-to-Income Ratio
         X_transformed['Debt_to_Income'] = (X_transformed['AMT_CREDIT'] /
@@ -334,6 +350,12 @@ class FeatureCreation2(BaseEstimator, TransformerMixin):
             'EXT_SOURCE_MEAN',
             'EXT_SOURCE_STD'
         ]
+
+        if input_features is None and self.feature_names is None:
+            raise ValueError("Transformer has not been fitted yet. Call 'fit' before using this estimator.")
+
+        if input_features is None:
+            input_features = self.feature_names
 
         if input_features is not None:
             return input_features + created_features
