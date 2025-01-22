@@ -88,7 +88,10 @@ reduce noise, as most validation/test score were very similar,
    potential for this client before all the data collection.
 3. To improve imbalance affect, collecting more data from the minority class 
 would likely improve the model’s performance. Or improve data collection 
-   process to include features that can better distinguish the classes.
+   process to include features that can better distinguish the classes. As 
+   for this project several strategies, like added weights, cross 
+   validation with stratified k fold, and train test split with stratify, were 
+   applied to reduce the affect.
 4. It would 
 also be valuable to investigate the nature of the 'external source score', 
 as this feature had a significant impact on the final model.
